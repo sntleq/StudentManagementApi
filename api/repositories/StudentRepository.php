@@ -2,7 +2,6 @@
 require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../contracts/IBaseRepository.php';
 require_once __DIR__ . '/../models/Student.php';
-require_once __DIR__ . '/../services/StudentService.php';
 
 class StudentRepository implements IBaseRepository {
     protected PDO $databaseContext;
@@ -21,7 +20,7 @@ class StudentRepository implements IBaseRepository {
         return $this->BuildResultList($result);
     }
 
-    public function GetById(int $id) : ?object {
+    public function GetById(int $id) : ?array {
         $query = "SELECT * FROM {$this->table} WHERE id = :id";
         $result = $this->ExecuteSqlQuery($query, [':id' => $id]);
 
@@ -29,24 +28,15 @@ class StudentRepository implements IBaseRepository {
     }
 
     public function Add($entity) : void {
-        StudentService::ValidateInputs($entity, false);
-
-        $student = StudentService::ToStudent($entity);
-
         $query = "INSERT INTO {$this->table} (name, midterm, finals) VALUES (:name, :midterm, :finals)";
-        $params = StudentService::GetParams($student, false);
+        $params = $this::GetParams($entity, false);
 
         $this->ExecuteSqlQuery($query, $params);
     }
 
-    public function Update(int $id, $entity) : void {
-        StudentService::ValidateInputs($entity, true);
-        $entity['id'] = $id;
-
-        $student = StudentService::ToStudent($entity);
-
+    public function Update($entity) : void {
         $query = "UPDATE {$this->table} SET name = :name, midterm = :midterm, finals = :finals WHERE id = :id";
-        $params = StudentService::GetParams($student, true);
+        $params = $this::GetParams($entity, true);
 
         $this->ExecuteSqlQuery($query, $params);
     }
@@ -54,6 +44,7 @@ class StudentRepository implements IBaseRepository {
     public function Delete(int $id) : void {
         $query = "DELETE FROM {$this->table} WHERE id = :id";
         $params = [':id' => $id];
+
         $this->ExecuteSqlQuery($query, $params);
     }
 
@@ -68,23 +59,35 @@ class StudentRepository implements IBaseRepository {
         return null;
     }
 
-    private function BuildResult(?array $result) : ?Student {
+    private function BuildResult(?array $result) : ?array {
         if (!$result || empty($result[0])) {
             return null;
         }
 
-        $row = $result[0];
-        return StudentService::ToStudent($row);
+        return $result[0];
     }
 
     private function BuildResultList(array $result) : array {
         $students = [];
 
         foreach ($result as $row) {
-            $student = StudentService::ToStudent($row);
-            $students[] = $student;
+            $students[] = $row;
         }
 
         return $students;
+    }
+
+    private static function GetParams($student, $includeId) : array {
+        $params = [
+            ':name'    => $student->Name,
+            ':midterm' => $student->Midterm,
+            ':finals'  => $student->Finals
+        ];
+
+        if ($includeId) {
+            $params[':id'] = $student->Id;
+        }
+
+        return $params;
     }
 }

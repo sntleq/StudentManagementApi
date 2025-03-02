@@ -1,32 +1,83 @@
 <?php
-require_once __DIR__ . '/../config/Database.php';
 require_once __DIR__ . '/../models/Student.php';
-require_once __DIR__ . '/../contracts/IBaseRepository.php';
+require_once __DIR__ . '/../repositories/StudentRepository.php';
 
 class StudentService {
-    public static function ValidateInputs($entity, $checkId) {
-        try {
-            if (!isset($entity['name']) || empty(trim($entity['name']))) {
-                throw new Exception("Student name is required");
-            }
+    private StudentRepository $studentRepository;
 
-            if (!isset($entity['midterm']) || !is_numeric($entity['midterm'])) {
-                throw new Exception("Midterm score is required and must be a number");
-            }
-
-            if (!isset($entity['finals']) || !is_numeric($entity['finals'])) {
-                throw new Exception("Finals score is required and must be a number");
-            }
-
-            if ($checkId && (!isset($entity['id']) || !is_numeric($entity['id']))) {
-                throw new Exception("Student ID is required and must be a number");
-            }
-        } catch (Exception $exception) {
-            error_log("Input Error: {$exception->getMessage()}");
-        }
+    public function __construct($studentRepository) {
+        $this->studentRepository = $studentRepository;
     }
 
-    public static function ToStudent($entity) : Student {
+    public function GetAllStudents() : array {
+        $students = [];
+
+        foreach ($this->studentRepository->GetAll() as $entity) {
+            $students[] = $this::ToStudent($entity);
+        }
+
+        return $students;
+    }
+
+    public function GetStudentById(int $id) : ?Student {
+        return $this::ToStudent($this->studentRepository->GetById($id));
+    }
+
+    public function AddStudent($entity) {
+        if (!self::ValidateInputs($entity)) {
+            throw new Exception('Invalid input data');
+        }
+
+        $student = $this::ToStudent($entity);
+        $this->studentRepository->Add($student);
+    }
+
+    public function UpdateStudent($id, $entity) {
+        if (!self::ValidateInputs($entity)) {
+            throw new Exception('Invalid input data');
+        }
+
+        $entity['id'] = $id;
+
+        $student = $this::ToStudent($entity);
+        $this->studentRepository->Update($student);
+    }
+
+    private static function ValidateInputs($entity) : bool {
+        if (!self::ValidateName($entity['name'])) {
+            return false;
+        }
+
+        if (!self::ValidateMidterm($entity['midterm'])) {
+            return false;
+        }
+
+        if (!self::ValidateFinals($entity['finals'])) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static function ValidateName($name) : bool {
+        return isset($name) && !empty(trim($name));
+    }
+
+    private static function ValidateMidterm($midterm) : bool {
+        return isset($midterm) && is_numeric($midterm)
+                && 0 <= $midterm && $midterm <= 100;
+    }
+
+    private static function ValidateFinals($finals) : bool {
+        return isset($finals) && is_numeric($finals)
+                && 0 <= $finals && $finals <= 100;
+    }
+
+    public static function ToStudent($entity) : ?Student {
+        if ($entity == null) {
+            return null;
+        }
+
         $student = new Student();
         $student->Id = $entity['id'] ?? null;
         $student->Name = $entity['name'];
@@ -36,19 +87,5 @@ class StudentService {
         $student->Status = $student->Grade >= 75 ? 'Passed' : 'Failed';
 
         return $student;
-    }
-
-    public static function GetParams($student, $includeId) : array {
-        $params = [
-            ':name'    => $student->Name,
-            ':midterm' => $student->Midterm,
-            ':finals'  => $student->Finals
-        ];
-
-        if ($includeId) {
-            $params[':id'] = $student->Id;
-        }
-
-        return $params;
     }
 }
