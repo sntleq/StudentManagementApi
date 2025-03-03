@@ -44,7 +44,11 @@ class StudentController {
     }
 
     public function DeleteStudent(int $id) {
-        $this->studentRepository->Delete($id);
-        echo "Student Deleted Successfully";
+        try {
+            $this->studentService->DeleteStudent($id);
+            echo "Student Deleted Successfully";
+        } catch (Exception $exception) {
+            error_log("Request Handling Error: {$exception->getMessage()}");
+        }
     }
 }

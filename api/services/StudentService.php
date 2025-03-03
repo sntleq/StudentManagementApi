@@ -43,6 +43,10 @@ class StudentService {
         $this->studentRepository->Update($student);
     }
 
+    public function DeleteStudent($id) {
+        $this->studentRepository->Delete($id);
+    }
+
     private static function ValidateInputs($entity) : bool {
         if (!self::ValidateName($entity['name'])) {
             return false;

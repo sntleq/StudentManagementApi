@@ -56,6 +56,10 @@ class StudentRepository implements IBaseRepository {
             return $statementObject->fetchAll(PDO::FETCH_ASSOC);
         }
 
+        if ($statementObject->rowCount() === 0) {
+            throw new Exception("User not found.");
+        }
+
         return null;
     }
 
